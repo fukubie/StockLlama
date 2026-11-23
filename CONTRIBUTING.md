@@ -11,9 +11,16 @@ Use synthetic games and mocked network responses
 Run the checks before opening a pull request
 
 ```sh
-go test -cover ./...
+gofmt -l .
 go vet ./...
+go run honnef.co/go/tools/cmd/staticcheck@v0.8.2 ./...
+go run golang.org/x/vuln/cmd/govulncheck@v1.10.0 ./...
+go test -race -cover ./...
 ```
+
+CI runs the same checks on every pull request and they must pass before merge
+Pull requests to main need passing CI, CodeQL, govulncheck, and dependency review
+Pick an issue labelled good first issue and comment before you start
 
 For interface changes also run the browser checks in the README
 Explain what changed and how you tested it
