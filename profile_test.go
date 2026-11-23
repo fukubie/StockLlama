@@ -177,6 +177,24 @@ func TestPGNHeadersContainingOneDot(t *testing.T) {
 		}
 	}
 }
+func TestPGNWrappedCommentStartingWithAnnotation(t *testing.T) {
+	game := `[Event "Casual"]
+[White "Target"]
+[Black "Other"]
+[Result "*"]
+
+1. e4 { this is a long comment that wraps
+[%clk 0:09:58] } e5 2. Nf3 *`
+	for _, tc := range []struct {
+		text string
+		want int
+	}{{game, 1}, {game + "\n\n" + game, 2}} {
+		g, err := parsePGN(tc.text)
+		if err != nil || len(g) != tc.want {
+			t.Fatalf("got %d games, want %d: %v", len(g), tc.want, err)
+		}
+	}
+}
 func TestImports(t *testing.T) {
 	games, _ := json.Marshal([]rawGame{{PGN: demo}})
 	wrapped, _ := json.Marshal(map[string]any{"games": []rawGame{{PGN: demo}}})
