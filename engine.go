@@ -81,11 +81,20 @@ func newEngine(path string) (*engine, error) {
 			}
 		}
 	}()
-	e.send("uci")
-	if err = e.until("uciok"); err == nil {
-		e.send("setoption name Threads value 1")
-		e.send("setoption name Hash value 16")
-		e.send("isready")
+	err = e.send("uci")
+	if err == nil {
+		err = e.until("uciok")
+	}
+	if err == nil {
+		err = e.send("setoption name Threads value 1")
+	}
+	if err == nil {
+		err = e.send("setoption name Hash value 16")
+	}
+	if err == nil {
+		err = e.send("isready")
+	}
+	if err == nil {
 		err = e.until("readyok")
 	}
 	if err != nil {
@@ -94,7 +103,12 @@ func newEngine(path string) (*engine, error) {
 	}
 	return e, nil
 }
-func (e *engine) send(s string) { fmt.Fprintln(e.in, s) }
+func (e *engine) send(s string) error {
+	if _, err := fmt.Fprintln(e.in, s); err != nil {
+		return fmt.Errorf("cannot write to Stockfish: %w", err)
+	}
+	return nil
+}
 func (e *engine) until(want string) error {
 	timer := time.NewTimer(10 * time.Second)
 	defer timer.Stop()
@@ -113,11 +127,15 @@ func (e *engine) until(want string) error {
 	}
 }
 func (e *engine) Analyse(fen string, ms int) (evaluation, error) {
-	e.send("position fen " + fen)
-	e.send(fmt.Sprintf("go movetime %d", ms))
+	result := evaluation{}
+	if err := e.send("position fen " + fen); err != nil {
+		return result, err
+	}
+	if err := e.send(fmt.Sprintf("go movetime %d", ms)); err != nil {
+		return result, err
+	}
 	timer := time.NewTimer(15 * time.Second)
 	defer timer.Stop()
-	result := evaluation{}
 	for {
 		select {
 		case line, ok := <-e.lines:
