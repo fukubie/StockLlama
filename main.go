@@ -80,6 +80,9 @@ func decode(w http.ResponseWriter, r *http.Request, v any) error {
 	r.Body = http.MaxBytesReader(w, r.Body, 16<<20)
 	return json.NewDecoder(r.Body).Decode(v)
 }
+
+var syncFile = (*os.File).Sync
+
 func atomicJSON(path string, v any) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		return err
@@ -95,6 +98,9 @@ func atomicJSON(path string, v any) error {
 	defer os.Remove(f.Name())
 	if err = f.Chmod(0600); err == nil {
 		_, err = f.Write(data)
+	}
+	if err == nil {
+		err = syncFile(f)
 	}
 	closeErr := f.Close()
 	if err != nil {
