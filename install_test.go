@@ -50,6 +50,7 @@ func TestStockfishAsset(t *testing.T) {
 		{"linux", "arm64", "stockfish-linux-arm64-universal.tar.gz"},
 		{"windows", "amd64", "stockfish-windows-x86-64-universal.zip"},
 		{"windows", "arm64", "stockfish-windows-arm64-universal.zip"},
+		{"linux", "riscv64", "stockfish-linux-riscv64-universal.tar.gz"},
 	} {
 		i := stockfishAsset(sf19Assets, tc.goos, tc.goarch)
 		if i < 0 || sf19Assets[i] != tc.want {
@@ -58,6 +59,11 @@ func TestStockfishAsset(t *testing.T) {
 	}
 	if i := stockfishAsset([]string{"stockfish-linux-x86-64-universal.tar.gz"}, "darwin", "arm64"); i != -1 {
 		t.Errorf("darwin matched a Linux build at index %d", i)
+	}
+	for _, goarch := range []string{"386", "arm", "ppc64le", "s390x"} {
+		if i := stockfishAsset(sf19Assets, "linux", goarch); i != -1 {
+			t.Errorf("linux/%s matched %s, want no build", goarch, sf19Assets[i])
+		}
 	}
 }
 

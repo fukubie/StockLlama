@@ -33,11 +33,12 @@ func (p *progressReader) Read(b []byte) (int, error) {
 
 // stockfishAsset returns the index of the release asset to download for goos
 // and goarch, or -1 if none fits. macOS ships one universal build for both
-// architectures; other systems ship one universal build per architecture.
+// architectures; other systems ship one universal build per architecture,
+// so an architecture with no official build matches nothing.
 func stockfishAsset(names []string, goos, goarch string) int {
-	arch := "x86-64"
-	if goarch == "arm64" {
-		arch = "arm64"
+	arch := map[string]string{"amd64": "x86-64", "arm64": "arm64", "riscv64": "riscv64"}[goarch]
+	if arch == "" && goos != "darwin" {
+		return -1
 	}
 	for i, n := range names {
 		if goos == "darwin" {
