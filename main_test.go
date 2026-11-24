@@ -31,7 +31,15 @@ func TestSecurity(t *testing.T) {
 	for _, tc := range []struct {
 		name, host, origin, token string
 		status                    int
-	}{{"valid", "127.0.0.1:8765", "http://127.0.0.1:8765", a.token, 200}, {"no token", "127.0.0.1:8765", "", "", 403}, {"foreign origin", "127.0.0.1:8765", "https://evil.invalid", a.token, 403}, {"DNS rebinding", "evil.invalid:8765", "", a.token, 403}} {
+	}{
+		{"valid", "127.0.0.1:8765", "http://127.0.0.1:8765", a.token, 200},
+		{"no token", "127.0.0.1:8765", "", "", 403},
+		{"foreign origin", "127.0.0.1:8765", "https://evil.invalid", a.token, 403},
+		{"DNS rebinding", "evil.invalid:8765", "", a.token, 403},
+		{"localhost", "localhost:8765", "http://localhost:8765", a.token, 200},
+		{"IPv6 loopback", "[::1]:8765", "http://[::1]:8765", a.token, 200},
+		{"different loopback origin", "localhost:8765", "http://127.0.0.1:8765", a.token, 403},
+	} {
 		t.Run(tc.name, func(t *testing.T) {
 			r := httptest.NewRequest("POST", "http://"+tc.host+"/api/settings", strings.NewReader(`{"provider":"builtin"}`))
 			r.Header.Set("Origin", tc.origin)
