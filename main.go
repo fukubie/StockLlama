@@ -39,16 +39,33 @@ type job struct {
 	Percent int    `json:"percent"`
 }
 type app struct {
-	mu         sync.Mutex
-	settings   settings
-	current    *profile
-	game       *chess.Game
-	human      chess.Color
-	job        job
-	dir        string
-	token      string
-	ollama     *exec.Cmd
-	playEngine *engine
+	mu             sync.Mutex
+	settings       settings
+	current        *profile
+	game           *chess.Game
+	human          chess.Color
+	job            job
+	dir            string
+	token          string
+	ollama         *managedOllama
+	ollamaStopping bool
+	playEngine     *engine
+}
+
+type managedOllama struct {
+	cmd  *exec.Cmd
+	done chan struct{}
+}
+
+func (a *app) stopOllama() {
+	a.mu.Lock()
+	a.ollamaStopping = true
+	instance := a.ollama
+	a.mu.Unlock()
+	if instance != nil {
+		_ = instance.cmd.Process.Kill()
+		<-instance.done
+	}
 }
 
 func newApp(dir string) *app {
@@ -384,6 +401,10 @@ func (a *app) handler() http.Handler {
 	mux.HandleFunc("POST /api/ollama/start", func(w http.ResponseWriter, r *http.Request) {
 		a.mu.Lock()
 		defer a.mu.Unlock()
+		if a.ollamaStopping {
+			fail(w, fmt.Errorf("the app is shutting down"))
+			return
+		}
 		if a.ollama != nil {
 			fail(w, fmt.Errorf("an app-managed Ollama instance is already running"))
 			return
@@ -393,7 +414,17 @@ func (a *app) handler() http.Handler {
 			fail(w, err)
 			return
 		}
-		a.ollama = cmd
+		instance := &managedOllama{cmd: cmd, done: make(chan struct{})}
+		a.ollama = instance
+		go func() {
+			_ = cmd.Wait()
+			a.mu.Lock()
+			if a.ollama == instance {
+				a.ollama = nil
+			}
+			close(instance.done)
+			a.mu.Unlock()
+		}()
 		writeJSON(w, map[string]string{"message": "Ollama starting on port 11435. Wait a moment, then Detect models."})
 	})
 	mux.HandleFunc("POST /api/engine/install", func(w http.ResponseWriter, r *http.Request) {
@@ -697,9 +728,6 @@ func main() {
 	if err != nil && err != http.ErrServerClosed {
 		log.Print(err)
 	}
-	if a.ollama != nil {
-		a.ollama.Process.Kill()
-		a.ollama.Wait()
-	}
+	a.stopOllama()
 	a.closeEngine()
 }
