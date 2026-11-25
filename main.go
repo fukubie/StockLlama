@@ -643,6 +643,10 @@ func (a *app) handler() http.Handler {
 	})
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		host, _, err := net.SplitHostPort(r.Host)
+		if err != nil {
+			// HTTP clients can omit the default port from the Host header.
+			host, _, err = net.SplitHostPort(r.Host + ":80")
+		}
 		if err != nil || (host != "127.0.0.1" && host != "localhost" && host != "::1") {
 			http.Error(w, "local access only", http.StatusForbidden)
 			return

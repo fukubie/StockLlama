@@ -33,6 +33,11 @@ func TestSecurity(t *testing.T) {
 		status                    int
 	}{
 		{"valid", "127.0.0.1:8765", "http://127.0.0.1:8765", a.token, 200},
+		{"IPv4 default port", "127.0.0.1", "http://127.0.0.1", a.token, 200},
+		{"localhost default port", "localhost", "http://localhost", a.token, 200},
+		{"IPv6 default port", "[::1]", "http://[::1]", a.token, 200},
+		{"foreign host without port", "evil.invalid", "", a.token, 403},
+		{"missing host", "", "", a.token, 403},
 		{"no token", "127.0.0.1:8765", "", "", 403},
 		{"foreign origin", "127.0.0.1:8765", "https://evil.invalid", a.token, 403},
 		{"DNS rebinding", "evil.invalid:8765", "", a.token, 403},
@@ -41,7 +46,8 @@ func TestSecurity(t *testing.T) {
 		{"different loopback origin", "localhost:8765", "http://127.0.0.1:8765", a.token, 403},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			r := httptest.NewRequest("POST", "http://"+tc.host+"/api/settings", strings.NewReader(`{"provider":"builtin"}`))
+			r := httptest.NewRequest("POST", "/api/settings", strings.NewReader(`{"provider":"builtin"}`))
+			r.Host = tc.host
 			r.Header.Set("Origin", tc.origin)
 			r.Header.Set("X-StockLlama", tc.token)
 			w := httptest.NewRecorder()
