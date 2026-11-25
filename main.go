@@ -545,6 +545,12 @@ func (a *app) handler() http.Handler {
 			fail(w, err)
 			return
 		}
+		switch in.Color {
+		case "", "white", "black":
+		default:
+			fail(w, fmt.Errorf("color must be white or black"))
+			return
+		}
 		a.mu.Lock()
 		defer a.mu.Unlock()
 		if a.current == nil {

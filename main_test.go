@@ -169,6 +169,34 @@ func TestFailedEngineRollsBackHumanMove(t *testing.T) {
 		t.Fatal("human move was not rolled back")
 	}
 }
+func TestPlayColor(t *testing.T) {
+	for _, tc := range []struct {
+		color  string
+		status int
+		human  chess.Color
+		moves  int
+	}{
+		{"white", 200, chess.White, 0},
+		{"", 200, chess.White, 0},
+		{"black", 200, chess.Black, 1},
+		{"purple", 400, chess.Black, 1},
+		{"White", 400, chess.Black, 1},
+	} {
+		t.Run(tc.color, func(t *testing.T) {
+			a := newApp(t.TempDir())
+			a.current = fixture(t)
+			a.game.Move(a.game.ValidMoves()[0])
+			a.human = chess.Black
+			code, data := request(t, a, "POST", "/api/play", map[string]any{"reset": true, "color": tc.color})
+			if code != tc.status || a.human != tc.human || len(a.game.Moves()) != tc.moves {
+				t.Fatal(code, string(data), a.human, len(a.game.Moves()))
+			}
+			if code == 400 && !strings.Contains(string(data), "color must be white or black") {
+				t.Fatal(string(data))
+			}
+		})
+	}
+}
 func TestInvalidMoveDoesNotChangeBoard(t *testing.T) {
 	a := newApp(t.TempDir())
 	a.current = fixture(t)
