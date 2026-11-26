@@ -177,6 +177,7 @@ func TestPGNHeadersContainingOneDot(t *testing.T) {
 		}
 	}
 }
+
 func TestPGNWrappedCommentStartingWithAnnotation(t *testing.T) {
 	game := `[Event "Casual"]
 [White "Target"]
@@ -188,7 +189,12 @@ func TestPGNWrappedCommentStartingWithAnnotation(t *testing.T) {
 	for _, tc := range []struct {
 		text string
 		want int
-	}{{game, 1}, {game + "\n\n" + game, 2}} {
+	}{
+		{game, 1},
+		{game + "\n\n" + game, 2},
+		// PGN does not require a space between the tag name and its value.
+		{"[Event\"A\"]\n[Result \"*\"]\n1. e4 e5 *\n[Event\"B\"]\n1. d4 d5 *", 2},
+	} {
 		g, err := parsePGN(tc.text)
 		if err != nil || len(g) != tc.want {
 			t.Fatalf("got %d games, want %d: %v", len(g), tc.want, err)

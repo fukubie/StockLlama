@@ -163,7 +163,7 @@ func parsePGN(text string) ([]rawGame, error) {
 
 // Only real tag-pair lines such as [Event "x"] count as headers, so a wrapped
 // comment line that starts with an annotation like [%clk 0:09:58] stays movetext.
-var pgnTagPair = regexp.MustCompile(`(?m)^\s*\[[A-Za-z0-9_]+\s+"`)
+var pgnTagPair = regexp.MustCompile(`(?m)^\s*\[[A-Za-z0-9_]+\s*"`)
 
 // hasMovetext reports whether s contains a non-blank line that is not a header.
 func hasMovetext(s string) bool {
