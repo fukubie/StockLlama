@@ -77,7 +77,12 @@ func newApp(dir string) *app {
 	data, err := os.ReadFile(filepath.Join(dir, "settings.json"))
 	if err == nil {
 		s := defaultSettings()
-		if json.Unmarshal(data, &s) == nil && validSettings(s) == nil {
+		if err := json.Unmarshal(data, &s); err != nil {
+			// Log only the error, never the file contents.
+			log.Printf("warning: settings.json could not be parsed, using defaults: %v", err)
+		} else if err := validSettings(s); err != nil {
+			log.Printf("warning: settings.json is invalid, using defaults: %v", err)
+		} else {
 			s.APIKey = ""
 			a.settings = s
 		}

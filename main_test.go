@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -54,6 +55,43 @@ func TestSecurity(t *testing.T) {
 			a.handler().ServeHTTP(w, r)
 			if w.Code != tc.status {
 				t.Fatal(w.Code, w.Body.String())
+			}
+		})
+	}
+}
+func TestCorruptSettingsLogWarning(t *testing.T) {
+	var logs bytes.Buffer
+	log.SetOutput(&logs)
+	t.Cleanup(func() { log.SetOutput(os.Stderr) })
+	for _, tc := range []struct {
+		name, data, want string
+	}{
+		{"parse", `{"provider": "api", "apiKey": "test-secret-in-file"`, "could not be parsed"},
+		{"invalid", `{"provider": "bogus", "endpoint": "test-secret-in-file"}`, "is invalid"},
+		{"valid", `{"provider": "builtin"}`, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			logs.Reset()
+			dir := t.TempDir()
+			if err := os.WriteFile(filepath.Join(dir, "settings.json"), []byte(tc.data), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			a := newApp(dir)
+			got := logs.String()
+			if tc.want == "" {
+				if got != "" {
+					t.Fatalf("unexpected log output: %q", got)
+				}
+				return
+			}
+			if !strings.Contains(got, "settings.json") || !strings.Contains(got, tc.want) {
+				t.Fatalf("missing warning, got %q", got)
+			}
+			if strings.Contains(got, "test-secret-in-file") {
+				t.Fatalf("warning leaked file contents: %q", got)
+			}
+			if a.settings != defaultSettings() {
+				t.Fatalf("settings = %+v, want defaults", a.settings)
 			}
 		})
 	}
