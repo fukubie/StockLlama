@@ -220,3 +220,32 @@ func TestInstallEngineSlowDownload(t *testing.T) {
 		})
 	}
 }
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func TestInstallEngineReleaseErrorsNameGitHub(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		rt   roundTripFunc
+		want string
+	}{
+		{"rate limited", func(r *http.Request) (*http.Response, error) {
+			return &http.Response{StatusCode: http.StatusForbidden, Body: http.NoBody, Header: http.Header{}, Request: r}, nil
+		}, "cannot fetch official Stockfish release from GitHub: server returned 403"},
+		{"unreachable", func(r *http.Request) (*http.Response, error) {
+			return nil, errors.New("dial failed")
+		}, "cannot fetch official Stockfish release from GitHub: request failed"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			original := apiClient
+			apiClient = &http.Client{Transport: tc.rt}
+			t.Cleanup(func() { apiClient = original })
+			_, err := installEngine(context.Background())
+			if err == nil || !strings.HasPrefix(err.Error(), tc.want) || strings.Contains(err.Error(), "Chess.com") {
+				t.Fatalf("want %q, got %v", tc.want, err)
+			}
+		})
+	}
+}
