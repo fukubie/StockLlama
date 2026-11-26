@@ -476,3 +476,10 @@ func TestIsLoopbackHost(t *testing.T) {
 		}
 	}
 }
+func TestCheckAddr(t *testing.T) {
+	for address, ok := range map[string]bool{"127.0.0.1:8765": true, "localhost:8765": true, "[::1]:8765": true, "0.0.0.0:8765": false, "[::]:8765": false, ":8765": false, "127.0.0.1": false} {
+		if err := checkAddr(address); (err == nil) != ok {
+			t.Errorf("checkAddr(%q) = %v, want ok %v", address, err, ok)
+		}
+	}
+}

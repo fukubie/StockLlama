@@ -708,15 +708,21 @@ func (a *app) handler() http.Handler {
 		mux.ServeHTTP(w, r)
 	})
 }
+func checkAddr(address string) error {
+	host, _, err := net.SplitHostPort(address)
+	if err != nil || !isLoopbackHost(host) {
+		return fmt.Errorf("STOCKLLAMA_ADDR must bind to 127.0.0.1, localhost, or [::1], for example 127.0.0.1:8765")
+	}
+	return nil
+}
 func main() {
 	a := newApp("data")
 	address := os.Getenv("STOCKLLAMA_ADDR")
 	if address == "" {
 		address = "127.0.0.1:8765"
 	}
-	host, _, err := net.SplitHostPort(address)
-	if err != nil || host != "127.0.0.1" {
-		log.Fatal("STOCKLLAMA_ADDR must bind to 127.0.0.1")
+	if err := checkAddr(address); err != nil {
+		log.Fatal(err)
 	}
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
