@@ -17,6 +17,7 @@ go build -trimpath -ldflags="-s -w" -o bin/stockllama .
 
 The app prints its local address
 It accepts connections only from your own device
+Set `STOCKLLAMA_ADDR` to use another local address such as `localhost:8765` or `[::1]:8765`
 
 ## Prepare for a player
 
