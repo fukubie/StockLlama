@@ -84,6 +84,9 @@ func newApp(dir string) *app {
 	}
 	return a
 }
+func isLoopbackHost(host string) bool {
+	return host == "127.0.0.1" || host == "localhost" || host == "::1"
+}
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(v)
@@ -684,7 +687,7 @@ func (a *app) handler() http.Handler {
 			// HTTP clients can omit the default port from the Host header.
 			host, _, err = net.SplitHostPort(r.Host + ":80")
 		}
-		if err != nil || (host != "127.0.0.1" && host != "localhost" && host != "::1") {
+		if err != nil || !isLoopbackHost(host) {
 			http.Error(w, "local access only", http.StatusForbidden)
 			return
 		}

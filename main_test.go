@@ -469,3 +469,10 @@ func TestRealSparringEndpoints(t *testing.T) {
 		t.Fatal(code, string(data))
 	}
 }
+func TestIsLoopbackHost(t *testing.T) {
+	for host, want := range map[string]bool{"127.0.0.1": true, "localhost": true, "::1": true, "evil.example": false, "localhost.evil.example": false, "": false} {
+		if got := isLoopbackHost(host); got != want {
+			t.Errorf("isLoopbackHost(%q) = %v, want %v", host, got, want)
+		}
+	}
+}

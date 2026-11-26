@@ -46,7 +46,7 @@ func validSettings(s settings) error {
 	if err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
 		return fmt.Errorf("enter a base endpoint URL without credentials, query, or fragment")
 	}
-	local := u.Hostname() == "localhost" || u.Hostname() == "127.0.0.1" || u.Hostname() == "::1"
+	local := isLoopbackHost(u.Hostname())
 	if u.Scheme != "https" && !(u.Scheme == "http" && local) {
 		return fmt.Errorf("remote endpoints require HTTPS")
 	}
