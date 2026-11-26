@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand/v2"
@@ -68,6 +69,13 @@ func gameAt(fen string) (*chess.Game, error) {
 	return chess.NewGame(option), nil
 }
 
+var errRequest = errors.New("request failed")
+
+type statusError int
+
+func (e statusError) Error() string { return fmt.Sprintf("server returned %d", int(e)) }
+
+// getJSON returns source-neutral errors; callers add wording for the site they called.
 func getJSON(ctx context.Context, client *http.Client, url string, target any) error {
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
@@ -76,13 +84,23 @@ func getJSON(ctx context.Context, client *http.Client, url string, target any) e
 	req.Header.Set("User-Agent", "StockLlama/0.2 (open-source local chess preparation)")
 	res, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("cannot reach Chess.com; check internet or import a file")
+		return fmt.Errorf("%w: %w", errRequest, err)
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		return fmt.Errorf("Chess.com returned %d; check username or try again later", res.StatusCode)
+		return statusError(res.StatusCode)
 	}
 	return json.NewDecoder(io.LimitReader(res.Body, 32<<20)).Decode(target)
+}
+func chessComError(err error) error {
+	var status statusError
+	if errors.As(err, &status) {
+		return fmt.Errorf("Chess.com returned %d; check username or try again later", int(status))
+	}
+	if errors.Is(err, errRequest) {
+		return fmt.Errorf("cannot reach Chess.com; check internet or import a file")
+	}
+	return err
 }
 func fetchGames(ctx context.Context, client *http.Client, base, username string, limit int) ([]rawGame, error) {
 	if !usernameRE.MatchString(username) || limit < 1 || limit > 200 {
@@ -93,7 +111,7 @@ func fetchGames(ctx context.Context, client *http.Client, base, username string,
 		Archives []string `json:"archives"`
 	}
 	if err := getJSON(ctx, client, base+"/archives", &archives); err != nil {
-		return nil, err
+		return nil, chessComError(err)
 	}
 	result := []rawGame{}
 	pattern := regexp.MustCompile("^" + regexp.QuoteMeta(base) + `/\d{4}/\d{2}$`)
@@ -106,7 +124,7 @@ func fetchGames(ctx context.Context, client *http.Client, base, username string,
 			Games []rawGame `json:"games"`
 		}
 		if err := getJSON(ctx, client, url, &month); err != nil {
-			return nil, err
+			return nil, chessComError(err)
 		}
 		recent := &recentHeap{}
 		capacity := limit - len(result)

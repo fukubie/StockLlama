@@ -278,3 +278,15 @@ func TestRealStockfish(t *testing.T) {
 		t.Fatal(m, source, err)
 	}
 }
+func TestFetchErrorsNameChessCom(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusForbidden) }))
+	_, e := fetchGames(context.Background(), s.Client(), s.URL, "target", 1)
+	if e == nil || e.Error() != "Chess.com returned 403; check username or try again later" {
+		t.Fatal(e)
+	}
+	s.Close()
+	_, e = fetchGames(context.Background(), s.Client(), s.URL, "target", 1)
+	if e == nil || e.Error() != "cannot reach Chess.com; check internet or import a file" {
+		t.Fatal(e)
+	}
+}

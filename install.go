@@ -61,7 +61,7 @@ func installEngine(ctx context.Context, notify ...func(int)) (string, error) {
 		} `json:"assets"`
 	}
 	if err := getJSON(ctx, apiClient, "https://api.github.com/repos/official-stockfish/Stockfish/releases/latest", &release); err != nil {
-		return "", fmt.Errorf("cannot fetch official Stockfish release: %w", err)
+		return "", fmt.Errorf("cannot fetch official Stockfish release from GitHub: %w", err)
 	}
 	names := make([]string, len(release.Assets))
 	for i, a := range release.Assets {
