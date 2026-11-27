@@ -149,8 +149,7 @@ func fetchGames(ctx context.Context, client *http.Client, base, username string,
 func parsePGN(text string) ([]rawGame, error) {
 	text = strings.TrimPrefix(text, "\ufeff")
 	// Split only at a new header section after movetext; comments and variations stay with their game.
-	boundary := regexp.MustCompile(`(?m)^\s*\[`)
-	starts := boundary.FindAllStringIndex(text, -1)
+	starts := pgnTagPair.FindAllStringIndex(text, -1)
 	offsets := []int{0}
 	previous := 0
 	for _, s := range starts {
@@ -180,11 +179,15 @@ func parsePGN(text string) ([]rawGame, error) {
 	return games, nil
 }
 
+// Only real tag-pair lines such as [Event "x"] count as headers, so a wrapped
+// comment line that starts with an annotation like [%clk 0:09:58] stays movetext.
+var pgnTagPair = regexp.MustCompile(`(?m)^\s*\[[A-Za-z0-9_]+\s*"`)
+
 // hasMovetext reports whether s contains a non-blank line that is not a header.
 func hasMovetext(s string) bool {
 	for _, line := range strings.Split(s, "\n") {
 		line = strings.TrimSpace(line)
-		if line != "" && !strings.HasPrefix(line, "[") {
+		if line != "" && !pgnTagPair.MatchString(line) {
 			return true
 		}
 	}
