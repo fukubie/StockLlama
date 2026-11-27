@@ -1,12 +1,7 @@
-.venv/
-__pycache__/
-*.egg-info/
-*.pyc
 profile.json
 data/
 engines/
 stockfish.exe
-.pytest_cache/
 .tools/
 bin/
 dist/
@@ -20,6 +15,7 @@ test-results/
 *.safetensors
 *.onnx
 *.bin
+# Keep credentials from being committed by accident.
 .env
 .env.*
 !.env.example
