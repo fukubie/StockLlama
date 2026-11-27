@@ -94,7 +94,9 @@ func isLoopbackHost(host string) bool {
 }
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(v)
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		log.Printf("writeJSON: %v", err)
+	}
 }
 
 // errBadDrill is returned when a saved drill position cannot be parsed.
@@ -103,7 +105,9 @@ var errBadDrill = fmt.Errorf("this drill position is invalid; re-analyse the pla
 func fail(w http.ResponseWriter, err error) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(400)
-	json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+	if err := json.NewEncoder(w).Encode(map[string]string{"error": err.Error()}); err != nil {
+		log.Printf("fail: %v", err)
+	}
 }
 func decode(w http.ResponseWriter, r *http.Request, v any) error {
 	r.Body = http.MaxBytesReader(w, r.Body, 16<<20)

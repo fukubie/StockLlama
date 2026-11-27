@@ -59,6 +59,15 @@ func TestSecurity(t *testing.T) {
 		})
 	}
 }
+func TestWriteJSONLogsEncodeError(t *testing.T) {
+	var logs bytes.Buffer
+	log.SetOutput(&logs)
+	t.Cleanup(func() { log.SetOutput(os.Stderr) })
+	writeJSON(httptest.NewRecorder(), make(chan int))
+	if !strings.Contains(logs.String(), "writeJSON:") {
+		t.Fatalf("encode error not logged: %q", logs.String())
+	}
+}
 func TestCorruptSettingsLogWarning(t *testing.T) {
 	var logs bytes.Buffer
 	log.SetOutput(&logs)
