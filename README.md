@@ -5,7 +5,7 @@ A local chess trainer built with Go and Stockfish
 ## Run
 
 On Windows open `start.cmd`
-For a fresh clone install [Go](https://go.dev/dl/) first
+For a fresh clone install [Go](https://go.dev/dl/) 1.26 or newer first
 Use Settings to install Stockfish or choose an existing executable
 
 On other systems build and run from the project directory
