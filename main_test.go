@@ -160,6 +160,32 @@ func TestLoadMissingPlayer(t *testing.T) {
 		t.Fatal(code)
 	}
 }
+func TestDeleteProfile(t *testing.T) {
+	a := newApp(t.TempDir())
+	if err := a.saveProfile(fixture(t)); err != nil {
+		t.Fatal(err)
+	}
+	games := filepath.Join(a.dir, "games", "target.json")
+	if err := atomicJSON(games, sample{}); err != nil {
+		t.Fatal(err)
+	}
+	if status, data := request(t, a, "POST", "/api/load", map[string]string{"username": "target"}); status != 200 {
+		t.Fatal(string(data))
+	}
+	status, data := request(t, a, "POST", "/api/delete", map[string]string{"username": "Target"})
+	if status != 200 || a.current != nil || len(a.profiles()) != 0 {
+		t.Fatal(status, string(data))
+	}
+	if _, err := os.Stat(games); !os.IsNotExist(err) {
+		t.Fatal("games file not removed")
+	}
+	if status, _ = request(t, a, "POST", "/api/delete", map[string]string{"username": "target"}); status != 404 {
+		t.Fatal(status)
+	}
+	if status, _ = request(t, a, "POST", "/api/delete", map[string]string{"username": "../etc"}); status != 400 {
+		t.Fatal("accepted traversal")
+	}
+}
 func TestNoProfileEndpoints(t *testing.T) {
 	a := newApp(t.TempDir())
 	for _, path := range []string{"coach", "play", "drill"} {

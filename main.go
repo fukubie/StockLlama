@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -522,6 +523,39 @@ func (a *app) handler() http.Handler {
 		a.current = &p
 		a.game = chess.NewGame()
 		a.human = chess.White
+		writeJSON(w, a.state())
+	})
+	mux.HandleFunc("POST /api/delete", func(w http.ResponseWriter, r *http.Request) {
+		var in struct {
+			Username string `json:"username"`
+		}
+		if err := decode(w, r, &in); err != nil || !usernameRE.MatchString(in.Username) {
+			fail(w, fmt.Errorf("invalid saved player"))
+			return
+		}
+		a.mu.Lock()
+		defer a.mu.Unlock()
+		if a.job.Busy {
+			fail(w, fmt.Errorf("wait for analysis to finish"))
+			return
+		}
+		name := strings.ToLower(in.Username) + ".json"
+		err := os.Remove(filepath.Join(a.dir, "profiles", name))
+		if errors.Is(err, os.ErrNotExist) {
+			http.Error(w, "saved player not found", http.StatusNotFound)
+			return
+		}
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		if err = os.Remove(filepath.Join(a.dir, "games", name)); err != nil && !errors.Is(err, os.ErrNotExist) {
+			fail(w, err)
+			return
+		}
+		if a.current != nil && strings.EqualFold(a.current.Username, in.Username) {
+			a.current = nil
+		}
 		writeJSON(w, a.state())
 	})
 	mux.HandleFunc("GET /api/export", func(w http.ResponseWriter, r *http.Request) {
